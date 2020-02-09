@@ -1,0 +1,280 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="author" content="Sergey Savchuk, serg.malinovski@gmail.com">
+
+        <title>Guitar Chord Generator (v1.0)</title>
+    </head>
+    <style type="text/css">
+        .fret-number {
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+            height: 24px;
+            vertical-align: middle;
+        }
+
+        .string-row {
+            border-top: 1px solid black;
+        }
+        .string-row:last-child {
+            border-bottom: 1px solid black;
+        }
+
+        .fret {
+            display: inline-block;
+            height: 32px;
+            vertical-align: middle;
+
+            text-align: center;
+
+            border-top-width: 0;
+            border-bottom-width: 0;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+
+            line-height: 32px;
+        }
+        .fret:first-child {
+            border-left: 0;
+            border-right: 4px solid black;
+        }
+
+        .chord-notes {
+            margin: 10px;
+        }
+
+        .octave-coloring {
+            margin: 10px;
+        }
+
+        .octaves-legend {
+            margin-top: 4px;
+        }
+
+        .octaves-legend-item {
+            padding: 4px;
+        }
+
+        .change-lang {
+            margin: 10px;
+        }
+
+        .notes {
+            background-color: lightgrey;
+            border: 1px solid black;
+            width: fit-content;
+            margin: 10px;
+        }
+        .notes-item {
+            border-right: 1px solid black;
+            padding: 4px;
+            display: inline-block;
+        }
+        .notes-item:last-child {
+            border-right: none;
+        }
+    </style>
+
+    <script type="text/javascript">
+        var title = {
+            ru: "Генератор аккордов для гитары (v1.0)",
+            en: "Guitar Chord Generator (v1.0)"
+        }
+        var fretNumbers = [
+            "", "I", "II", "III", "VI", "V", "VI", "VII", "VIII", "IX",
+            "X", "XI", "XII", "XIII", "XVI", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"
+        ];
+        var notes = {
+            en: ["A", "B", "H", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"],
+            ru: ["Ля", "Ля#", "Си", "До", "До#", "Ре", "Ре#", "Ми", "Фа", "Фа#", "Соль", "Соль#"]
+        }
+        var octaveNotes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "H"];
+        var notesCount = 12;
+        var firstNoteOfStrings = ["E", "H", "G", "D", "A", "E"];
+        var firstOctaveOfStrings = [2, 1, 1, 1, 0, 0];
+        var octaves = {
+            count: 5,
+            title: {
+                en: "Octave coloring",
+                ru: "Расцветка октав"
+            },
+            bgColors: ["#FF7575", "#FE9149", "#E7DA00", "#B3E716", "#C4C0DB"],
+            names: {
+                en: ["Small octave", "First octave", "Second octave", "Third octave", "Fourth octave"],
+                ru: ["Малая октава", "Первая октава", "Вторая октава", "Третья октава", "Четвёртая октава"]
+            }
+        };
+        var stringsCount = 6;
+        var fretboard = [];
+        var chordNotes = [];
+
+        function getNoteIndex(note) {
+            for (var i = 0; i < notesCount; ++i) {
+                if (note === notes.en[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function getOctaveNoteIndex(note) {
+            for (var i = 0; i < notesCount; ++i) {
+                if (note === octaveNotes[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function rerenderFretboard() {
+            var lang = document.getElementById("lang").value;
+
+            var titleElement = document.getElementById("title");
+            titleElement.innerText = title[lang];
+
+            var isColorized = document.getElementById("octaveColoring").checked;
+            var octaveColoringTitleElement = document.getElementById("octaveColoringTitle");
+            octaveColoringTitleElement.innerText = octaves.title[lang];
+            var octavesLegendElement = document.getElementById("octavesLegend");
+            octavesLegendElement.style.display = isColorized ? "block" : "none";
+            for (var i = 0; i < octaves.count; ++i) {
+                octaves.elements[i].innerText = octaves.names[lang][i];
+            }
+
+            for (var stringNumber = 0; stringNumber < stringsCount; ++stringNumber) {
+                for (var fretNumber = 0; fretNumber < fretNumbers.length; ++fretNumber) {
+                    var fretboardItem = fretboard[stringNumber][fretNumber];
+                    fretboardItem.element.innerText = notes[lang][fretboardItem.noteIndex];
+                    fretboardItem.element.style.background = isColorized ? fretboardItem.backgroundColor : "white";
+                    fretboardItem.element.style.color = "black";
+                    chordNotes.forEach(noteIndex => {
+                        if (fretboardItem.noteIndex === noteIndex) {
+                            fretboardItem.element.style.background = "red";
+                            fretboardItem.element.style.color = "lightgrey";
+                        }
+                    });
+                }
+            }
+
+            var chordNotesElement = document.getElementById("chordNotes");
+            chordNotesElement.innerText = chordNotes.map(noteIndex => notes[lang][noteIndex]).join(", ");
+        }
+
+        function generateChord() {
+            chordNotes = [];
+            var chord = document.getElementById("chord").value;
+            if (chord.length > 0) {
+                var noteLength = 1;
+                if (chord[1] === "#") {
+                    noteLength = 2;
+                }
+                var note = chord.substring(0, noteLength);
+                var noteIndex = getNoteIndex(note);
+                if (noteIndex !== -1) {
+                    chordNotes = [];
+                    chordNotes.push(noteIndex);
+                    chordNotes.push((noteIndex + (chord.includes("m") ? 3 : 4)) % notesCount);
+                    chordNotes.push((noteIndex + 7) % notesCount);
+                    if (chord.includes("7")) {
+                        chordNotes.push((noteIndex + 7 + (chord.includes("+") ? 4 : 3)) % notesCount);
+                    }
+                }
+            }
+            rerenderFretboard();
+        }
+
+        function onOctaveColoring() {
+            rerenderFretboard();
+        }
+
+        function onlangChanged() {
+            rerenderFretboard();
+        }
+
+        function onLoaded() {
+            var fretboardElement = document.getElementById("fretboard");
+
+            var fretNumberRow = document.createElement("div");
+            for (var fretNumber = 0; fretNumber < fretNumbers.length; ++fretNumber) {
+                var fretElement = document.createElement("span");
+                fretElement.className = "fret-number";
+                fretElement.innerText = fretNumbers[fretNumber];
+                fretElement.style.width = fretNumber ? 66 - (fretNumber * 2) : 34;
+                fretNumberRow.appendChild(fretElement);
+            }
+            fretboardElement.appendChild(fretNumberRow);
+
+            for (var stringNumber = 0; stringNumber < stringsCount; ++stringNumber) {
+                var stringElement = document.createElement("div");
+                stringElement.className = "string-row";
+                var firstNoteIndex = getNoteIndex(firstNoteOfStrings[stringNumber]);
+                var firstOctaveNoteIndex = getOctaveNoteIndex(firstNoteOfStrings[stringNumber]);
+                var fletboadString = [];
+                for (var fretNumber = 0; fretNumber < fretNumbers.length; ++fretNumber) {
+                    var fretElement = document.createElement("span");
+                    fretElement.className = "fret";
+                    fretElement.style.width = fretNumber ? 64 - (fretNumber * 2) : 34;
+                    stringElement.appendChild(fretElement);
+                    var noteIndex = (fretNumber + firstNoteIndex) % notesCount;
+                    fletboadString.push({
+                        element: fretElement,
+                        noteIndex: noteIndex,
+                        backgroundColor: octaves.bgColors[firstOctaveOfStrings[stringNumber] + Math.trunc((fretNumber + firstOctaveNoteIndex) / notesCount)]
+                    });
+                }
+                fretboardElement.appendChild(stringElement);
+                fretboard.push(fletboadString);
+            }
+
+            var octavesLegendElement = document.getElementById("octavesLegend");
+            octaves.elements = [];
+            for (var i = 0; i < octaves.count; ++i) {
+                var octavesLegendItemElement = document.createElement("span");
+                octavesLegendItemElement.className = "octaves-legend-item";
+                octavesLegendItemElement.style.background = octaves.bgColors[i];
+                octavesLegendItemElement.innerText = octaves.names[i];
+                octavesLegendElement.appendChild(octavesLegendItemElement);
+                octaves.elements.push(octavesLegendItemElement);
+            }
+
+            rerenderFretboard();
+        }
+
+        document.addEventListener("DOMContentLoaded", onLoaded);
+    </script>
+    <body>
+        <H1 id="title"></H1>
+
+        <div class="change-lang">
+            <select id="lang" onchange="onlangChanged()">
+                <option disabled selected>Выберете язык</option>
+                <option selected value="en">En</option>
+                <option value="ru">Ru</option>
+            </select>
+        </div>
+
+        <div id="fretboard"></div>
+
+        <div class="chord-notes">
+            <input type="text" size="5" id="chord" oninput="generateChord()">
+            <span id="chordNotes"></span>
+        </div>
+
+        <div class="notes">
+            <span class="notes-item">C (До)</span>
+            <span class="notes-item">D (Ре)</span>
+            <span class="notes-item">E (Ми)</span>
+            <span class="notes-item">F (Фа)</span>
+            <span class="notes-item">G (Соль)</span>
+            <span class="notes-item">A (Ля)</span>
+            <span class="notes-item">B (Си бемоль)</span>
+            <span class="notes-item">H (Си)</span>
+        </div>
+
+        <div class="octave-coloring">
+            <input type="checkbox" id="octaveColoring" onclick="onOctaveColoring()"><span id="octaveColoringTitle"></span>
+            <div id="octavesLegend" class="octaves-legend"></div>
+        </div>
+    </body>
+</html>
